@@ -78,9 +78,9 @@ module.exports = function (url, options, callback) {
   })
 
   feed.stop = function () {
-    feed.emit('end')
     dbUpdates.stop()
-    console.log('feed stop: emitted end.')
+    console.log('feed stop: emitting end...')
+    feed.emit('end')
   }
 
   couch.db.list(function (error, result) {
