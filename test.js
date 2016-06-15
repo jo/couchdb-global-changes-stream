@@ -17,7 +17,8 @@ test('existing database and single change', function (t) {
         console.log('feed started...')
 
         stream.on('data', function (change) {
-          console.log('on data', change)
+          console.log('on data', change, change.db_name !== dbname)
+
           if (change.db_name !== dbname) return
 
           t.equal(change.change.id, 'mydoc')
