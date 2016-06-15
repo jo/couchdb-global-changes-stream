@@ -1,16 +1,16 @@
 {
   "name": "couchdb-global-changes-stream",
-  "version": "1.0.0",
   "description": "Multiplexed persisted global couchdb changes stream across all databases.",
   "main": "index.js",
   "bin": "cli.js",
   "scripts": {
     "pretest": "standard",
-    "test": "tap test.js"
+    "test": "tap test.js",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jo/couchdb-global-changes-stream.git"
+    "url": "https://github.com/jo/couchdb-global-changes-stream.git"
   },
   "keywords": [
     "couchdb",
@@ -25,7 +25,8 @@
   "homepage": "https://github.com/jo/couchdb-global-changes-stream#readme",
   "devDependencies": {
     "standard": "^7.1.2",
-    "tap": "^5.7.2"
+    "tap": "^5.7.2",
+    "semantic-release": "^4.3.5"
   },
   "dependencies": {
     "from": "^0.1.3",
