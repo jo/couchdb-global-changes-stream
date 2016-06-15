@@ -3,7 +3,11 @@ var from = require('from')
 
 var checkpointer = require('./lib/checkpointer')
 
-module.exports = function (url, options) {
+module.exports = function (url, options, callback) {
+  if (typeof options === 'function') {
+    callback = options
+    options = {}
+  }
   options = options || {}
 
   options.concurrency = options.concurrency || 1
@@ -73,6 +77,12 @@ module.exports = function (url, options) {
     if (feed.paused) feed.resume()
   })
 
+  feed.stop = function () {
+    feed.pause()
+    dbUpdates.stop()
+    feed.emit('end')
+  }
+
   couch.db.list(function (error, result) {
     if (error) return
 
@@ -81,13 +91,7 @@ module.exports = function (url, options) {
     if (feed.paused) feed.resume()
 
     dbUpdates.follow()
+
+    callback(feed)
   })
-
-  feed.stop = function () {
-    feed.pause()
-    dbUpdates.stop()
-    feed.emit('end')
-  }
-
-  return feed
 }

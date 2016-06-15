@@ -14,6 +14,8 @@ var stringify = through(function write (data) {
   this.emit('data', JSON.stringify(data) + '\n')
 })
 
-feed(url)
-  .pipe(stringify)
-  .pipe(process.stdout)
+feed(url, function (stream) {
+  stream
+    .pipe(stringify)
+    .pipe(process.stdout)
+})
