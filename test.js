@@ -16,6 +16,11 @@ test('existing database and single change', function (t) {
       feed(COUCHDB, function (stream) {
         console.log('feed started...')
 
+        stream.on('end', function () {
+          console.log('end received!...')
+          t.end()
+        })
+
         stream.on('data', function (change) {
           console.log('on data', change, change.db_name !== dbname)
 
@@ -26,11 +31,6 @@ test('existing database and single change', function (t) {
           console.log('stopping stream...')
 
           stream.stop()
-        })
-
-        stream.on('end', function () {
-          console.log('end received!...')
-          t.end()
         })
 
         couch.use(dbname).insert({ _id: 'mydoc', foo: 'bar' })
