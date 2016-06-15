@@ -78,9 +78,8 @@ module.exports = function (url, options, callback) {
   })
 
   feed.stop = function () {
-    feed.pause()
-    dbUpdates.stop()
     feed.emit('end')
+    dbUpdates.stop()
     console.log('feed stop: emitted end.')
   }
 
