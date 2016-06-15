@@ -22,6 +22,7 @@ test('existing database and single change', function (t) {
 
           t.equal(change.change.id, 'mydoc')
 
+          console.log('stopping stream...')
           stream.stop()
         })
 
