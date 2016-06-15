@@ -15,11 +15,11 @@ test('existing database and single change', function (t) {
       console.log('start feed...')
       feed(COUCHDB, function (stream) {
         console.log('feed started...')
+
         stream.on('data', function (change) {
           console.log('on data', change)
           if (change.db_name !== dbname) return
 
-          t.equal(change.change.seq, 1)
           t.equal(change.change.id, 'mydoc')
 
           stream.stop()
