@@ -28,7 +28,10 @@ test('existing database and single change', function (t) {
           stream.stop()
         })
 
-        stream.on('end', t.end)
+        stream.on('end', function () {
+          console.log('end received!...')
+          t.end()
+        })
 
         couch.use(dbname).insert({ _id: 'mydoc', foo: 'bar' })
       })
