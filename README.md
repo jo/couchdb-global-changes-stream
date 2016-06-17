@@ -8,14 +8,12 @@ Status](https://travis-ci.org/jo/couchdb-view-cache-stream.svg?branch=master)](h
 ```js
 var feed = require('couchdb-global-changes-stream')
 
-feed('http://localhost:5984', function (stream) {
-  stream.pipe(process.stdout)
-})
+feed().pipe(stringify).pipe(process.stdout)
 ```
 
 ## CLI
 ```sh
-couchdb-global-changes-stream http://localhost:5984
+couchdb-global-changes-stream [URL]
 ```
 
 ## Test
