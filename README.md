@@ -2,7 +2,7 @@
 Multiplexed persisted global couchdb changes stream across all databases.
 
 [![Build
-Status](https://travis-ci.org/jo/couchdb-view-cache-stream.svg?branch=master)](https://travis-ci.org/jo/couchdb-view-cache-stream)
+Status](https://travis-ci.org/jo/couchdb-global-changes-stream.svg?branch=master)](https://travis-ci.org/jo/couchdb-global-changes-stream)
 
 ## API
 ```js
