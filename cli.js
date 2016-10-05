@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
+var _ = require('highland')
 var feed = require('.')
-var through = require('through')
 
 var url = process.argv[2]
 
-var stringify = through(function write (data) {
-  this.emit('data', JSON.stringify(data) + '\n')
-})
+function stringify (change) {
+  return JSON.stringify(change) + '\n'
+}
 
-feed(url).pipe(stringify).pipe(process.stdout)
+var pipeline = _.pipeline(
+  feed(url),
+  _.map(stringify)
+)
+
+pipeline.pipe(process.stdout)

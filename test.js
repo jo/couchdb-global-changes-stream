@@ -9,18 +9,20 @@ var couch = nano(COUCHDB)
 
 test('existing database and single change', function (t) {
   couch.db.destroy(dbname, function () {
-    couch.db.create(dbname, function () {
-      var stream = feed(COUCHDB, { persist: true })
-      stream.on('data', function (change) {
-        if (change.db_name !== dbname) return
+    couch.db.create(dbname, function (error) {
+      t.error(error, 'database created')
 
-        if (!change.change) return
-        t.equal(change.change.id, 'mydoc')
-
-        stream.stop()
-      })
-
-      stream.on('end', t.end)
+      feed(COUCHDB, { timeout: 100 })
+        .filter(function (change) {
+          if (change.db_name !== dbname) return
+          if (!change.change) return
+          return change.change.id === 'mydoc'
+        })
+        .head()
+        .toArray(function (changes) {
+          t.equal(changes[0].change.id, 'mydoc')
+          t.end()
+        })
 
       couch.use(dbname).insert({ _id: 'mydoc', foo: 'bar' })
     })
@@ -29,18 +31,17 @@ test('existing database and single change', function (t) {
 
 test('newly created database and single change', function (t) {
   couch.db.destroy(dbname, function () {
-    var stream = feed(COUCHDB, { persisted: true })
-    stream.on('data', function (change) {
-      if (change.db_name !== dbname) return
-      if (!change.change) return
-
-      t.equal(change.change.seq, 1)
-      t.equal(change.change.id, 'mydoc')
-
-      stream.stop()
-    })
-
-    stream.on('end', t.end)
+    feed(COUCHDB, { timeout: 100 })
+      .filter(function (change) {
+        if (change.db_name !== dbname) return
+        if (!change.change) return
+        return change.change.id === 'mydoc'
+      })
+      .head()
+      .toArray(function (changes) {
+        t.equal(changes[0].change.id, 'mydoc')
+        t.end()
+      })
 
     couch.db.create(dbname, function () {
       couch.use(dbname).insert({ _id: 'mydoc', foo: 'bar' })
