@@ -1,7 +1,7 @@
-sudo: false
+sudo: required
 language: node_js
 services:
-  - couchdb
+  - docker
 cache:
   directories:
     - node_modules
@@ -11,8 +11,10 @@ node_js:
   - '5'
 before_install:
   - npm i -g npm@^2.0.0
+  - docker pull klaemo/couchdb:2.0.0
 before_script:
   - npm prune
+  - docker run -d -p 5984:5984 --name couchdb couchdb --with-admin-party-please && sleep 5 && curl http://localhost:5984
 after_success:
   - npm run semantic-release
 branches:
