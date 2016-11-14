@@ -59,7 +59,8 @@ module.exports = function (url, options) {
   })
 
   options = options || {}
-  options.timeout = options.timeout || 60000
+  // options.timeout = options.timeout || 60000
+  options.timeout = options.timeout || 100
 
   return _.pipeline(
     getDbUpdates(couch, options),
