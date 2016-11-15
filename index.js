@@ -7,7 +7,15 @@ function isNotEmptyLine (line) {
 }
 
 function parseJSON (line) {
-  return JSON.parse(line)
+  var json = {}
+  try {
+    json = JSON.parse(line)
+  } catch (e) {}
+  return json
+}
+
+function isValid (change) {
+  return 'db_name' in change
 }
 
 function isUpdate (change) {
@@ -46,6 +54,7 @@ function getDbUpdates (couch, options) {
   .split()
   .filter(isNotEmptyLine)
   .map(parseJSON)
+  .filter(isValid)
   .map(function (data) {
     if (data.last_seq) {
       since = data.last_seq
