@@ -40,7 +40,7 @@ function getDbUpdates (couch, options) {
       .on('end', function () {
         // wait a bit for the parse and filter pipeline to finish
         // to ensure `since` has been set
-        setTimeout(next, 100)
+        setTimeout(next, 10)
       })
   })
   .split()
@@ -66,15 +66,28 @@ function formatChange (dbname) {
 }
 
 function getChanges (couch) {
+  var checkpoints = {}
+
   return function (update) {
+    var requestOptions = {
+      url: encodeURIComponent(update.db_name) + '/_changes',
+      qs: {
+        include_docs: true
+      }
+    }
+    if (update.db_name in checkpoints) {
+      requestOptions.qs.since = checkpoints[update.db_name]
+    }
+
     return _.pipeline(
-      couch({
-        url: encodeURIComponent(update.db_name) + '/_changes',
-        qs: {
-          include_docs: true
-        }
-      }),
+      couch(requestOptions),
       JSONStream.parse('results.*'),
+      _.map(function (data) {
+        if (data.seq) {
+          checkpoints[update.db_name] = data.seq
+        }
+        return data
+      }),
       _.map(formatChange(update.db_name))
     )
   }
