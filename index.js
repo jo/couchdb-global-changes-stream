@@ -2,6 +2,7 @@ var _ = require('highland')
 var JSONStream = require('JSONStream')
 var request = require('request')
 
+
 function isNotEmptyLine (line) {
   return line
 }
@@ -26,41 +27,76 @@ function isNoSystemDb (change) {
   return change.db_name.slice(0, 1) !== '_'
 }
 
+function doCheckpoint (couch, checkpoint, done) {
+  if (checkpoint.seq) {
+    // console.error('storing checkpoint:', checkpoint.seq)
+    couch({
+      url: '_global_changes', 
+      method: 'post',
+      json: true,
+      body: checkpoint
+    }, function (error, response, body) {
+      if (error) return done(error)
+      if (body.rev) checkpoint._rev = body.rev
+      done()
+    })
+  } else {
+    couch({
+      url: '_global_changes/' + encodeURIComponent(checkpoint._id), 
+      method: 'get',
+      json: true
+    }, function (error, response, body) {
+      // console.error('got checkpoint:', body)
+      if (error) return done(error)
+      if (body.seq) checkpoint.seq = body.seq
+      if (body._rev) checkpoint._rev = body._rev
+      done()
+    })
+  }
+}
+
 function getDbUpdates (couch, options) {
-  var since
+  var checkpoint = {
+    _id: '_local/couchdb-global-changes-feed-checkpoint'
+  }
 
   return _(function (push, next) {
     var requestOptions = {
       url: '_db_updates',
       qs: {
         feed: 'continuous',
-        timeout: options.timeout
+        timeout: options.timeout,
+        limit: 100
       }
     }
 
-    if (since) {
-      requestOptions.qs.since = since
-    }
+    doCheckpoint(couch, checkpoint, function (error) {
+      if (error) return push(error)
 
-    couch(requestOptions)
-      .on('data', push.bind(null, null))
-      .on('error', push)
-      .on('end', function () {
-        // wait a bit for the parse and filter pipeline to finish
-        // to ensure `since` has been set
-        setTimeout(next, 10)
-      })
+      if (checkpoint.seq) {
+        requestOptions.qs.since = checkpoint.seq
+      }
+
+      couch(requestOptions)
+        .on('data', push.bind(null, null))
+        .on('error', push)
+        .on('end', function () {
+          // wait a bit for the parse and filter pipeline to finish
+          // to ensure `checkpoint.seq` has been set
+          setTimeout(next, 10)
+        })
+    })
   })
   .split()
   .filter(isNotEmptyLine)
   .map(parseJSON)
-  .filter(isValid)
   .map(function (data) {
     if (data.last_seq) {
-      since = data.last_seq
+      checkpoint.seq = data.last_seq
     }
     return data
   })
+  .filter(isValid)
   .filter(isUpdate)
   .filter(isNoSystemDb)
 }
