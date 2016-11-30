@@ -65,8 +65,7 @@ function getDbUpdates (couch, options) {
       url: '_db_updates',
       qs: {
         feed: 'continuous',
-        timeout: options.timeout,
-        limit: 100
+        timeout: options.timeout
       }
     }
 
