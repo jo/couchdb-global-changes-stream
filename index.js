@@ -1,110 +1,155 @@
-var nano = require('nano')
-var Readable = require('stream').Readable
+var _ = require('highland')
+var JSONStream = require('JSONStream')
+var request = require('request')
 
-var checkpointer = require('./lib/checkpointer')
 
-module.exports = function (url, options) {
-  url = url || 'http://localhost:5984'
+function isNotEmptyLine (line) {
+  return line
+}
 
-  options = options || {}
-  options.limit = options.limit || 1
-  options.persist = options.persist || false
-  options.include_docs = options.include_docs || false
+function parseJSON (line) {
+  var json = {}
+  try {
+    json = JSON.parse(line)
+  } catch (e) {}
+  return json
+}
 
-  var stopped = false
+function isValid (change) {
+  return 'db_name' in change
+}
 
-  var feed = Readable({ objectMode: true })
+function isUpdate (change) {
+  return 'type' in change && change.type === 'updated'
+}
 
-  var dbs = Readable({ objectMode: true })
-  var dbnames = []
-  dbs.on('data', function (db) {
-    dbnames.push(db.name)
-  })
+function isNoSystemDb (change) {
+  return change.db_name.slice(0, 1) !== '_'
+}
 
-  var couch = nano(url)
-  var cp = checkpointer(couch, {
-    persist: options.persist
-  })
-
-  dbs._read = function () {}
-
-  function getNextDb (callback) {
-    if (dbnames.length) return callback(dbnames.shift())
-    dbs.once('data', function (db) {
-      getNextDb(callback)
+function doCheckpoint (couch, checkpoint, done) {
+  if (checkpoint.seq) {
+    // console.error('storing checkpoint:', checkpoint.seq)
+    couch({
+      url: '_global_changes', 
+      method: 'post',
+      json: true,
+      body: checkpoint
+    }, function (error, response, body) {
+      if (error) return done(error)
+      if (body.rev) checkpoint._rev = body.rev
+      done()
+    })
+  } else {
+    couch({
+      url: '_global_changes/' + encodeURIComponent(checkpoint._id), 
+      method: 'get',
+      json: true
+    }, function (error, response, body) {
+      // console.error('got checkpoint:', body)
+      if (error) return done(error)
+      if (body.seq) checkpoint.seq = body.seq
+      if (body._rev) checkpoint._rev = body._rev
+      done()
     })
   }
+}
 
-  function getChanges (dbname) {
-    cp.get(dbname, function (seq) {
-      couch.db
-        .changes(dbname, {
-          since: seq,
-          limit: options.limit,
-          include_docs: options.include_docs
-        }, function (error, response) {
-          if (error) return
+function getDbUpdates (couch, options) {
+  var checkpoint = {
+    _id: '_local/couchdb-global-changes-feed-checkpoint'
+  }
 
-          if (response.results.length) {
-            response.results
-              .map(function map (change) {
-                return {
-                  db_name: dbname,
-                  change: change
-                }
-              })
-              .forEach(function (change) {
-                // TODO: stop when push returns false and store the seq then:
-                // https://nodejs.org/api/stream.html#stream_class_stream_readable_1
-                // read() should continue reading from the resource and pushing
-                // data until push returns false, at which point it should stop
-                // reading from the resource.
-                if (!feed.ended && !stopped) feed.push(change)
-              })
-          }
+  return _(function (push, next) {
+    var requestOptions = {
+      url: '_db_updates',
+      qs: {
+        feed: 'continuous',
+        timeout: options.timeout
+      }
+    }
 
-          cp.set(dbname, response.last_seq, function () {
-            if (response.results.length === options.limit) {
-              // same as above
-              if (!feed.ended && !stopped) dbs.push({ name: dbname })
-            }
-            if (!response.results.length) {
-              if (!feed.ended && !stopped) feed.push({ db_name: dbname })
-              getNextDb(getChanges)
-            }
-          })
+    doCheckpoint(couch, checkpoint, function (error) {
+      if (error) return push(error)
+
+      if (checkpoint.seq) {
+        requestOptions.qs.since = checkpoint.seq
+      }
+
+      couch(requestOptions)
+        .on('data', push.bind(null, null))
+        .on('error', push)
+        .on('end', function () {
+          // wait a bit for the parse and filter pipeline to finish
+          // to ensure `checkpoint.seq` has been set
+          setTimeout(next, 10)
         })
     })
+  })
+  .split()
+  .filter(isNotEmptyLine)
+  .map(parseJSON)
+  .map(function (data) {
+    if (data.last_seq) {
+      checkpoint.seq = data.last_seq
+    }
+    return data
+  })
+  .filter(isValid)
+  .filter(isUpdate)
+  .filter(isNoSystemDb)
+}
+
+function formatChange (dbname) {
+  return function (change) {
+    return {
+      db_name: dbname,
+      change: change
+    }
   }
+}
 
-  // improvement: the `size` argument could be handled
-  feed._read = function (size) {
-    getNextDb(getChanges)
+function getChanges (couch) {
+  var checkpoints = {}
+
+  return function (update) {
+    var requestOptions = {
+      url: encodeURIComponent(update.db_name) + '/_changes',
+      qs: {
+        include_docs: true
+      }
+    }
+    if (update.db_name in checkpoints) {
+      requestOptions.qs.since = checkpoints[update.db_name]
+    }
+
+    return _.pipeline(
+      couch(requestOptions),
+      JSONStream.parse('results.*').on('error', console.error.bind(console)),
+      _.map(function (data) {
+        if (data.seq) {
+          checkpoints[update.db_name] = data.seq
+        }
+        return data
+      }),
+      _.map(formatChange(update.db_name))
+    )
   }
+}
 
-  couch.db.list(function (error, result) {
-    if (error) return
-
-    dbs.setMaxListeners(result.length * 2)
-    result.forEach(function (name) {
-      dbs.push({ name: name })
-    })
+module.exports = function (url, options) {
+  var couch = request.defaults({
+    baseUrl: url,
+    method: 'get'
   })
 
-  var dbUpdates = couch.followUpdates({})
-  dbUpdates.on('change', function (change) {
-    if (change.type === 'deleted') return
+  options = options || {}
+  // options.timeout = options.timeout || 60000
+  options.timeout = options.timeout || 1000
 
-    dbs.push({ name: change.db_name })
-  })
-  dbUpdates.follow()
-
-  feed.stop = function () {
-    if (feed.ended || stopped) return
-    stopped = true
-    feed.emit('end')
-    dbUpdates.stop()
-  }
-
-  return feed
+  return _.pipeline(
+    getDbUpdates(couch, options),
+    _.map(getChanges(couch)),
+    _.sequence()
+  )
 }

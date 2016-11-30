@@ -25,12 +25,14 @@
   },
   "homepage": "https://github.com/jo/couchdb-global-changes-stream#readme",
   "devDependencies": {
+    "nano": "^6.2.0",
+    "semantic-release": "^4.3.5",
     "standard": "^7.1.2",
-    "tap": "^5.7.2",
-    "semantic-release": "^4.3.5"
+    "tap": "^5.7.2"
   },
   "dependencies": {
-    "nano": "^6.2.0",
-    "through": "^2.3.8"
+    "JSONStream": "^1.2.1",
+    "highland": "^2.10.0",
+    "request": "^2.75.0"
   }
 }
