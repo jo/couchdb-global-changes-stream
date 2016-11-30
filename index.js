@@ -125,7 +125,7 @@ function getChanges (couch) {
 
     return _.pipeline(
       couch(requestOptions),
-      JSONStream.parse('results.*'),
+      JSONStream.parse('results.*').on('error', console.error.bind(console)),
       _.map(function (data) {
         if (data.seq) {
           checkpoints[update.db_name] = data.seq
