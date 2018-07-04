@@ -6,8 +6,9 @@
   "bin": "cli.js",
   "scripts": {
     "pretest": "standard",
-    "test": "tap test.js",
-    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+    "test": "tap --reporter=spec test.js",
+    "travis-deploy-once": "travis-deploy-once",
+    "semantic-release": "semantic-release"
   },
   "repository": {
     "type": "git",
@@ -25,12 +26,12 @@
   },
   "homepage": "https://github.com/jo/couchdb-global-changes-stream#readme",
   "devDependencies": {
-    "standard": "^7.1.2",
-    "tap": "^5.7.2",
-    "semantic-release": "^4.3.5"
+    "standard": "^11.0.1",
+    "tap": "^12.0.1",
+    "semantic-release": "^15.6.3"
   },
   "dependencies": {
-    "nano": "^6.2.0",
+    "nano": "^6.4.4",
     "through": "^2.3.8"
   }
 }
