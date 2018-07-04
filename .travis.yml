@@ -1,20 +1,15 @@
-sudo: false
 language: node_js
 services:
   - couchdb
 cache:
   directories:
-    - node_modules
+    - ~/.npm
 notifications:
   email: false
 node_js:
   - '9'
   - '8'
   - '6'
-before_install:
-  - npm i -g npm@^2.0.0
-before_script:
-  - npm prune
 after_success:
   - npm run travis-deploy-once "npm run semantic-release"
 branches:

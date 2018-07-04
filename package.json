@@ -2,7 +2,7 @@
   "name": "couchdb-global-changes-stream",
   "description": "Multiplexed persisted global couchdb changes stream across all databases.",
   "main": "index.js",
-  "version": "1.0.0",
+  "version": "0.0.0-development",
   "bin": "cli.js",
   "scripts": {
     "pretest": "standard",
