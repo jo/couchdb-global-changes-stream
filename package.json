@@ -26,9 +26,10 @@
   },
   "homepage": "https://github.com/jo/couchdb-global-changes-stream#readme",
   "devDependencies": {
+    "semantic-release": "^15.6.3",
     "standard": "^11.0.1",
     "tap": "^12.0.1",
-    "semantic-release": "^15.6.3"
+    "travis-deploy-once": "^5.0.1"
   },
   "dependencies": {
     "nano": "^6.4.4",
